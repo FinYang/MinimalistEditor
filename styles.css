@@ -5,6 +5,7 @@ textarea {
   padding: 0;
   border: 0;
   resize: none;
+  font-size: 16px;
 
   background-color: black;
   color: #E5E5E5;

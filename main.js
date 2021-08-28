@@ -10,7 +10,6 @@ require('electron-reload')(__dirname
 );
 // app.disableHardwareAcceleration();
 
-console.log("test main");
 
 let window = null;
 
