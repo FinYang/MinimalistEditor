@@ -15,6 +15,7 @@ let window = null;
 var file = null;
 var contents = null;
 var openFromFile = false;
+var force_quit = false;
 const devEnv = /electron/.test(process.argv[0]);
 
 const template = [
@@ -46,34 +47,25 @@ const template = [
         enabled: false,
         accelerator: 'Ctrl+S',
         label: "Save",
-        click: async () => {
-          if (openFromFile) {
-
-          window.webContents.send("saveFile", file);
-          window.setTitle(file);
-        } else if (true) {
-          const { filePath } = await dialog.showSaveDialog({});
-          file = filePath;
-          saveAs();
-        }
-        },
+        click: saveClick,
       },
       {
+        id: "save-as",
         label: "Save As...",
         accelerator: 'Ctrl+Shift+S',
         click: async () => {
-          const { filePath } = await dialog.showSaveDialog({});
-          file = filePath;
-          saveAs();
+          await saveAsClick()
         },
       },
       { type: 'separator' },
       {
         label: "DevTools",
+        accelerator: 'Ctrl+Shift+I',
         click: async () => { window.webContents.openDevTools() },
       },
       {
         label: "Exit",
+        accelerator: 'Ctrl+W',
         click: async () => { app.quit() },
       },
     ],
@@ -84,21 +76,36 @@ const menu = Menu.buildFromTemplate(template);
 Menu.setApplicationMenu(menu);
 
 
-function saveAs () {
-  // getSaveDir();
-  window.webContents.send("saveFile", file);
-  updateTitle(file);
-  console.log(file);
+async function saveClick () {
+  if (openFromFile) {
+    window.webContents.send("saveFile", file);
+    window.setTitle(file);
+  } else {
+    await saveAsClick()
+  }
+  out = Promise.resolve(1);
+  return out;
 }
 
-// function getSaveDir () {
-//   console.log("line 90");
-//   const filePaths = await dialog.showSaveDialog();
-//   console.log(filePaths)
-//   console.log(filePaths.filePath)
-//   file = filePaths.filePath;
-//   window.setTitle(file);
+async function saveAsClick () {
+    const { filePath } = await dialog.showSaveDialog({});
+    file = filePath;
+    console.log("save as called.")
+    window.webContents.send("saveFile", file);
+    updateTitle(file);
+    console.log(file);
+    out = Promise.resolve(1);
+    return out;
+}
+
+// function saveAs () {
+//   // getSaveDir();
+//   console.log("save as called.")
+//   window.webContents.send("saveFile", file);
+//   updateTitle(file);
+//   console.log(file);
 // }
+
 
 function logToApp (content) {
   window.webContents.send("mainConsoleLog", {content})
@@ -148,6 +155,51 @@ function createWindow() {
     // app.quit();
   })
   logToApp("For some reason the first logToApp doesn't show.");
+
+
+async function waitClick(menuItem) {
+  let result = menuItem.click()
+  // console.log("result waitClick");
+  console.log(result);
+
+  const clickPromise = new Promise((resolve, reject) => {
+    if(result) {
+      resolve(console.log("success"));
+    } else {
+      reject(console.log("failed"))
+    }
+
+  }
+  );
+
+  return clickPromise;
+}
+
+  window.on('close', async (event) => {
+      if(!force_quit){
+          // Handle menu-item or keyboard shortcut quit here
+          event.preventDefault();
+          const { response } =  await dialog.showMessageBox({
+            message: "Do you want to save changes?",
+            buttons: ["Save", "Don't Save", "Cancel"]
+          });
+          switch (response) {
+            case 0:
+                await saveClick();
+                force_quit = true;
+                app.quit();
+              break;
+            case 1:
+              force_quit = true;
+              app.quit();
+              break;
+            case 2:
+              // console.log(response);
+              break;
+          }
+      }
+  });
+
 }
 
 
@@ -169,7 +221,6 @@ app.once('ready', () => {
    logToApp("devEnv: " + devEnv);
    logToApp(process.argv);
 });
-
 
 
 
