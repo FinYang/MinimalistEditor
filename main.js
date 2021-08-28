@@ -8,7 +8,7 @@ require('electron-reload')(__dirname
 //   electron: path.join(__dirname, 'node_modules', '.bin', 'electron.cmd')
 // }
 );
-
+app.disableHardwareAcceleration();
 let window = null;
 
 var file = null;
@@ -61,6 +61,10 @@ const template = [
       },
       { type: 'separator' },
       {
+        label: "DevTools",
+        click: async () => { window.webContents.openDevTools() },
+      },
+      {
         label: "Exit",
         click: async () => { app.quit() },
       },
@@ -93,9 +97,8 @@ app.once('ready', () => {
 
   window.once('ready-to-show', () => {
     window.show()
+    // app.quit();
   })
-
-  window.webContents.openDevTools();
 
 })
 
