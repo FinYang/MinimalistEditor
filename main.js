@@ -1,34 +1,37 @@
-const {app, BrowserWindow, Menu, dialog} = require('electron')
+const {app, BrowserWindow, Menu, dialog, ipcMain} = require('electron')
 const path = require('path')
 const url = require('url')
 const fs = require("fs")
 
-let window = null
+require('electron-reload')(__dirname
+//   , {
+//   electron: path.join(__dirname, 'node_modules', '.bin', 'electron.cmd')
+// }
+);
 
-require('electron-reload')(__dirname)
+let window = null;
 
+var file = null;
 
 const template = [
   {
     label: "File",
     submenu: [
       {
-        id: "save-file",
-        enabled: false,
-        accelerator: 'Ctrl+S',
-        label: "Save File",
-        click: async () => {
-          window.webContents.send("saveFile");
-        },
+        label: "New Window",
+        accelerator: 'Ctrl+Shift+N',
+        click: async () => {},
       },
       {
-        label: "Open File",
+        label: "Open...",
         accelerator: 'Ctrl+O',
         click: async () => {
-          const filePaths = await dialog.showOpenDialog({
+          const { filePaths } = await dialog.showOpenDialog({
             properties: ["openFile"],
           });
-          const file = filePaths[0];
+          // console.log(filePaths);
+          file = filePaths[0];
+          // console.log(file);
           const contents = fs.readFileSync(file, "utf-8");
           // console.log(contents);
           window.webContents.send("fileOpened", {
@@ -36,9 +39,30 @@ const template = [
             filePath: file
           }
         );
+        window.setTitle(file + " - MinimalistEditor");
         const saveFileItem = menu.getMenuItemById("save-file");
         saveFileItem.enabled = true;
         },
+      },
+      {
+        id: "save-file",
+        enabled: false,
+        accelerator: 'Ctrl+S',
+        label: "Save",
+        click: async () => {
+          window.webContents.send("saveFile");
+          window.setTitle(file);
+        },
+      },
+      {
+        label: "Save As...",
+        accelerator: 'Ctrl+Shift+S',
+        click: async () => {},
+      },
+      { type: 'separator' },
+      {
+        label: "Exit",
+        click: async () => { app.quit() },
       },
     ],
   },
@@ -54,8 +78,10 @@ app.once('ready', () => {
     show: false,
     resizable: true,
     autoHideMenuBar: true,
+    title: "MinimalistEditor",
     webPreferences: {
       nodeIntegration: true,
+      contextIsolation: false
     }
   })
 
@@ -69,5 +95,11 @@ app.once('ready', () => {
     window.show()
   })
 
-  // window.webContents.openDevTools();
+  window.webContents.openDevTools();
+
 })
+
+
+ipcMain.on("contentChanged", (event) => {
+  window.setTitle("*" + window.title);
+});
