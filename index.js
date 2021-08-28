@@ -1,6 +1,11 @@
 console.log("Page loading.");
+// console.log(process.argv);
 const { ipcRenderer } = require("electron");
 const fs = require("fs");
+
+
+
+
 
 
 let openedFilePath;
@@ -29,4 +34,10 @@ ipcRenderer.on("saveFile", (event) => {
   fs.writeFileSync(openedFilePath, currentContainerValue, "utf-8");
   contentChanged = false;
   console.log("File saved.")
+});
+
+
+// console from main
+ipcRenderer.on("mainConsoleLog", (event, {content}) => {
+  console.log("main: " + content);
 });

@@ -8,10 +8,22 @@ require('electron-reload')(__dirname
 //   electron: path.join(__dirname, 'node_modules', '.bin', 'electron.cmd')
 // }
 );
-app.disableHardwareAcceleration();
+// app.disableHardwareAcceleration();
+
+console.log("test main");
+
 let window = null;
 
+
+
+
 var file = null;
+
+var contents = null;
+
+
+
+
 
 const template = [
   {
@@ -29,19 +41,9 @@ const template = [
           const { filePaths } = await dialog.showOpenDialog({
             properties: ["openFile"],
           });
-          // console.log(filePaths);
           file = filePaths[0];
-          // console.log(file);
-          const contents = fs.readFileSync(file, "utf-8");
-          // console.log(contents);
-          window.webContents.send("fileOpened", {
-            contents,
-            filePath: file
-          }
-        );
-        window.setTitle(file + " - MinimalistEditor");
-        const saveFileItem = menu.getMenuItemById("save-file");
-        saveFileItem.enabled = true;
+          openFile(file);
+
         },
       },
       {
@@ -57,7 +59,10 @@ const template = [
       {
         label: "Save As...",
         accelerator: 'Ctrl+Shift+S',
-        click: async () => {},
+        click: async () => {
+
+
+        },
       },
       { type: 'separator' },
       {
@@ -75,7 +80,26 @@ const template = [
 const menu = Menu.buildFromTemplate(template);
 Menu.setApplicationMenu(menu);
 
-app.once('ready', () => {
+
+
+
+function logToApp (content) {
+  window.webContents.send("mainConsoleLog", {content})
+}
+
+function openFile (file) {
+  contents = fs.readFileSync(file, "utf-8");
+  window.webContents.send("fileOpened", {
+    contents,
+    filePath: file
+  }
+  );
+  window.setTitle(file + " - MinimalistEditor");
+  const saveFileItem = menu.getMenuItemById("save-file");
+  saveFileItem.enabled = true;
+}
+
+function createWindow() {
   window = new BrowserWindow({
     width: 760,
     height: 760,
@@ -89,6 +113,7 @@ app.once('ready', () => {
     }
   })
 
+
   window.loadURL(url.format({
     pathname: path.join(__dirname, 'index.html'),
     protocol: 'file:',
@@ -99,8 +124,32 @@ app.once('ready', () => {
     window.show()
     // app.quit();
   })
+  logToApp("For some reason the first logToApp doesn't show.");
+}
 
-})
+var openFromFile = false;
+const devEnv = /electron/.test(process.argv[0]);
+app.once('ready', () => {
+   if (process.platform.startsWith('win') && !devEnv && process.argv.length >= 2) {
+      file = process.argv[1];
+
+      openFromFile = true;
+      createWindow();
+
+      openFile(file);
+
+   } else {
+      createWindow();
+   }
+
+
+   logToApp("openFromFile: " + openFromFile);
+   logToApp("devEnv: " + devEnv);
+   logToApp(process.argv);
+});
+
+
+
 
 
 ipcMain.on("contentChanged", (event) => {
