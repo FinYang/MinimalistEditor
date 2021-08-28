@@ -29,9 +29,9 @@ ipcRenderer.on("fileOpened", (event, { contents, filePath }) => {
   containerElm.value = contents;
 });
 
-ipcRenderer.on("saveFile", (event) => {
+ipcRenderer.on("saveFile", (event, file) => {
   const currentContainerValue =  containerElm.value;
-  fs.writeFileSync(openedFilePath, currentContainerValue, "utf-8");
+  fs.writeFileSync(file, currentContainerValue, "utf-8");
   contentChanged = false;
   console.log("File saved.")
 });

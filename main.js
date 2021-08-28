@@ -12,17 +12,10 @@ require('electron-reload')(__dirname
 
 
 let window = null;
-
-
-
-
 var file = null;
-
 var contents = null;
-
-
-
-
+var openFromFile = false;
+const devEnv = /electron/.test(process.argv[0]);
 
 const template = [
   {
@@ -31,7 +24,9 @@ const template = [
       {
         label: "New Window",
         accelerator: 'Ctrl+Shift+N',
-        click: async () => {},
+        click: async () => {
+          createWindow();
+        },
       },
       {
         label: "Open...",
@@ -40,6 +35,7 @@ const template = [
           const { filePaths } = await dialog.showOpenDialog({
             properties: ["openFile"],
           });
+          console.log(filePaths);
           file = filePaths[0];
           openFile(file);
 
@@ -51,16 +47,24 @@ const template = [
         accelerator: 'Ctrl+S',
         label: "Save",
         click: async () => {
-          window.webContents.send("saveFile");
+          if (openFromFile) {
+
+          window.webContents.send("saveFile", file);
           window.setTitle(file);
+        } else if (true) {
+          const { filePath } = await dialog.showSaveDialog({});
+          file = filePath;
+          saveAs();
+        }
         },
       },
       {
         label: "Save As...",
         accelerator: 'Ctrl+Shift+S',
         click: async () => {
-
-
+          const { filePath } = await dialog.showSaveDialog({});
+          file = filePath;
+          saveAs();
         },
       },
       { type: 'separator' },
@@ -80,10 +84,28 @@ const menu = Menu.buildFromTemplate(template);
 Menu.setApplicationMenu(menu);
 
 
+function saveAs () {
+  // getSaveDir();
+  window.webContents.send("saveFile", file);
+  updateTitle(file);
+  console.log(file);
+}
 
+// function getSaveDir () {
+//   console.log("line 90");
+//   const filePaths = await dialog.showSaveDialog();
+//   console.log(filePaths)
+//   console.log(filePaths.filePath)
+//   file = filePaths.filePath;
+//   window.setTitle(file);
+// }
 
 function logToApp (content) {
   window.webContents.send("mainConsoleLog", {content})
+}
+
+function updateTitle (file) {
+  window.setTitle(file + " - MinimalistEditor");
 }
 
 function openFile (file) {
@@ -93,9 +115,11 @@ function openFile (file) {
     filePath: file
   }
   );
-  window.setTitle(file + " - MinimalistEditor");
+  updateTitle(file);
   const saveFileItem = menu.getMenuItemById("save-file");
   saveFileItem.enabled = true;
+
+  openFromFile = true;
 }
 
 function createWindow() {
@@ -126,13 +150,12 @@ function createWindow() {
   logToApp("For some reason the first logToApp doesn't show.");
 }
 
-var openFromFile = false;
-const devEnv = /electron/.test(process.argv[0]);
+
 app.once('ready', () => {
    if (process.platform.startsWith('win') && !devEnv && process.argv.length >= 2) {
       file = process.argv[1];
 
-      openFromFile = true;
+
       createWindow();
 
       openFile(file);
@@ -153,4 +176,6 @@ app.once('ready', () => {
 
 ipcMain.on("contentChanged", (event) => {
   window.setTitle("*" + window.title);
+  const saveFileItem = menu.getMenuItemById("save-file");
+  saveFileItem.enabled = true;
 });
