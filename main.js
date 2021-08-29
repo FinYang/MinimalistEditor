@@ -27,7 +27,10 @@ const template = [
         label: "New Window",
         accelerator: 'Ctrl+Shift+N',
         click: async () => {
-          createWindow();
+          // createWindow();
+          // logToApp(app.getAppPath("exe"));
+          const { shell } = require('electron')
+          shell.openPath(process.argv[0])
         },
       },
       {
