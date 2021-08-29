@@ -17,6 +17,7 @@ var contents = null;
 var openFromFile = false;
 var force_quit = false;
 const devEnv = /electron/.test(process.argv[0]);
+var contentChanged = false;
 
 const template = [
   {
@@ -79,22 +80,30 @@ Menu.setApplicationMenu(menu);
 async function saveClick () {
   if (openFromFile) {
     window.webContents.send("saveFile", file);
-    window.setTitle(file);
+    updateTitle(file);
+    contentChanged = false;
+    out = true;
   } else {
-    await saveAsClick()
+    const  out  = await saveAsClick()
   }
-  out = Promise.resolve(1);
+  // console.log(out)
+  // out = Promise.resolve(1);
   return out;
 }
 
 async function saveAsClick () {
-    const { filePath } = await dialog.showSaveDialog({});
+    const { canceled, filePath } = await dialog.showSaveDialog({});
     file = filePath;
-    console.log("save as called.")
-    window.webContents.send("saveFile", file);
-    updateTitle(file);
-    console.log(file);
-    out = Promise.resolve(1);
+    if(!canceled) {
+      window.webContents.send("saveFile", file);
+      updateTitle(file);
+      contentChanged = false;
+      openFromFile = true;
+      out = true;
+    } else {
+      out = false;
+    }
+    // console.log(out);
     return out;
 }
 
@@ -157,26 +166,9 @@ function createWindow() {
   logToApp("For some reason the first logToApp doesn't show.");
 
 
-async function waitClick(menuItem) {
-  let result = menuItem.click()
-  // console.log("result waitClick");
-  console.log(result);
-
-  const clickPromise = new Promise((resolve, reject) => {
-    if(result) {
-      resolve(console.log("success"));
-    } else {
-      reject(console.log("failed"))
-    }
-
-  }
-  );
-
-  return clickPromise;
-}
 
   window.on('close', async (event) => {
-      if(!force_quit){
+      if(!force_quit && contentChanged){
           // Handle menu-item or keyboard shortcut quit here
           event.preventDefault();
           const { response } =  await dialog.showMessageBox({
@@ -185,9 +177,11 @@ async function waitClick(menuItem) {
           });
           switch (response) {
             case 0:
-                await saveClick();
+              saveRes = await saveClick();
+              if(saveRes) {
                 force_quit = true;
                 app.quit();
+              }
               break;
             case 1:
               force_quit = true;
@@ -207,9 +201,7 @@ app.once('ready', () => {
    if (process.platform.startsWith('win') && !devEnv && process.argv.length >= 2) {
       file = process.argv[1];
 
-
       createWindow();
-
       openFile(file);
 
    } else {
@@ -226,6 +218,7 @@ app.once('ready', () => {
 
 
 ipcMain.on("contentChanged", (event) => {
+  contentChanged = true;
   window.setTitle("*" + window.title);
   const saveFileItem = menu.getMenuItemById("save-file");
   saveFileItem.enabled = true;
