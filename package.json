@@ -17,6 +17,7 @@
     "electron-mksnapshot": "^13.0.0"
   },
   "dependencies": {
+    "detect-file-encoding-and-language": "^2.1.0",
     "electron-link": "^0.6.0",
     "electron-reload": "^2.0.0-alpha.1"
   }

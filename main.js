@@ -42,7 +42,24 @@ const template = [
           });
           console.log(filePaths);
           file = filePaths[0];
-          openFile(file);
+          if(process.platform.startsWith('win') && !devEnv && contentChanged){
+            const { exec } = require("child_process");
+            // console.log(process.argv.join(" ").concat(" ", file))
+            exec(process.argv[0].concat(" ", file), (error, data, getter) => {
+            	if(error){
+            		console.log("error",error.message);
+            		return;
+            	}
+            	if(getter){
+            		console.log("data",data);
+            		return;
+            	}
+            	console.log("data",data);
+
+            });
+          } else {
+            openFile(file);
+          }
 
         },
       },
@@ -95,7 +112,12 @@ async function saveClick () {
 }
 
 async function saveAsClick () {
-    const { canceled, filePath } = await dialog.showSaveDialog({});
+    const { canceled, filePath } = await dialog.showSaveDialog({
+      filters: [{
+      name: 'Text Documents',
+      extensions: ['txt']
+    }]
+    });
     file = filePath;
     if(!canceled) {
       window.webContents.send("saveFile", file);
@@ -127,18 +149,39 @@ function updateTitle (file) {
   window.setTitle(file + " - MinimalistEditor");
 }
 
+
 function openFile (file) {
-  contents = fs.readFileSync(file, "utf-8");
-  window.webContents.send("fileOpened", {
-    contents,
-    filePath: file
-  }
-  );
-  updateTitle(file);
+
+
+  const languageEncoding = require("detect-file-encoding-and-language");
+  languageEncoding(file).then((fileInfo) => {
+    const {encoding} = fileInfo
+    console.log(encoding);
+
+    //
+    //
+    //
+    // contents = fs.readFileSync(file, "utf-8");
+    contentsBuffer = fs.readFileSync(file)
+    // encoding = detectCharacterEncoding(contentsBuffer);
+    contents = contentsBuffer.toString(encoding);
+    // .toString(encoding);
+    window.webContents.send("fileOpened", {
+      contents,
+      filePath: file
+    }
+    );
+    updateTitle(file);
+    //
+    //
+    //
+  });
+
   const saveFileItem = menu.getMenuItemById("save-file");
   saveFileItem.enabled = true;
 
   openFromFile = true;
+  contentChanged = false;
 }
 
 function createWindow() {
@@ -167,7 +210,6 @@ function createWindow() {
     // app.quit();
   })
   logToApp("For some reason the first logToApp doesn't show.");
-
 
 
   window.on('close', async (event) => {
@@ -211,10 +253,10 @@ app.once('ready', () => {
       createWindow();
    }
 
-
    logToApp("openFromFile: " + openFromFile);
    logToApp("devEnv: " + devEnv);
    logToApp(process.argv);
+
 });
 
 
